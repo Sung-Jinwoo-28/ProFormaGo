@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProForma Go</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#0B1020',
+                        primary: '#6366F1',
+                        secondary: '#22D3EE',
+                        success: '#22C55E',
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <!-- Tailwind Animated Background -->
+    <div class="fixed inset-0 w-full h-full overflow-hidden -z-10 bg-darkbg">
+        <div
+            class="absolute top-0 left-1/4 w-96 h-96 bg-primary/30 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob">
+        </div>
+        <div
+            class="absolute top-0 right-1/4 w-96 h-96 bg-secondary/30 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-2000">
+        </div>
+        <div
+            class="absolute -bottom-32 left-1/3 w-96 h-96 bg-success/30 rounded-full mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-4000">
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Particles Container -->
+    <div id="particles-js" class="fixed inset-0 w-full h-full -z-5 pointer-events-none"></div>
+
+    <div class="container">
+        <div class="glass-card">
+            <header>
+                <div class="logo-area">
+                    <img src="{{ url_for('static', filename='logo.png') }}" alt="ProForma Go Logo" class="w-12 h-12">
+                    <h1>ProForma Go</h1>
+                </div>
+                <p class="subtitle">Investor-ready financial statements in Excel</p>
+                <p class="features-list">Income Statement • Balance Sheet • Cash Flow • Ratios</p>
+            </header>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-mode="extract">Single Ticker</button>
+                <button class="tab-btn" data-mode="compare">Compare Companies</button>
+            </div>
+
+            <form id="generateForm">
+                <input type="hidden" id="currentMode" value="extract">
+
+                <div class="input-group">
+                    <label id="tickerLabel" for="ticker">Company Ticker</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-building"></i>
+                        <input type="text" id="ticker" name="ticker" placeholder="e.g. RELIANCE" required
+                            autocomplete="off">
+                    </div>
+                    <small id="tickerHelp" class="help-text hidden">Enter up to 3 tickers separated by commas (e.g. TCS,
+                        INFY, WIPRO)</small>
+                </div>
+
+                <div class="input-group" id="yearsGroup">
+                    <label for="years">Historical Years</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-calendar"></i>
+                        <input type="number" id="years" name="years" placeholder="e.g. 5" min="1" max="20">
+                    </div>
+                </div>
+
+                <button type="submit" id="generateBtn">
+                    <span class="btn-text">Generate Model</span>
+                    <span class="btn-icon"><i class="fa-solid fa-bolt"></i></span>
+                    <div class="spinner hidden"></div>
+                </button>
+            </form>
+
+            <div id="statusMessage" class="status-message hidden"></div>
+
+            <div id="downloadArea" class="download-area hidden">
+                <p>Data Ready!</p>
+                <a href="#" id="downloadLink" class="download-btn">
+                    <i class="fa-solid fa-file-excel"></i> Download Excel
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('generateForm');
+        const generateBtn = document.getElementById('generateBtn');
+        const btnText = document.querySelector('.btn-text');
+        const btnIcon = document.querySelector('.btn-icon');
+        const spinner = document.querySelector('.spinner');
+        const statusMessage = document.getElementById('statusMessage');
+        const downloadArea = document.getElementById('downloadArea');
+        const downloadLink = document.getElementById('downloadLink');
+        const yearsGroup = document.getElementById('yearsGroup');
+        const tickerLabel = document.getElementById('tickerLabel');
+        const tickerInput = document.getElementById('ticker');
+        const tickerHelp = document.getElementById('tickerHelp');
+        const currentModeInput = document.getElementById('currentMode');
+        const tabBtns = document.querySelectorAll('.tab-btn');
+
+        // Tab Switching
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const mode = btn.dataset.mode;
+                currentModeInput.value = mode;
+
+                // Reset UI
+                statusMessage.classList.add('hidden');
+                downloadArea.classList.add('hidden');
+                form.reset();
+
+                if (mode === 'compare') {
+                    tickerLabel.textContent = "Company Tickers";
+                    tickerInput.placeholder = "e.g. TCS, INFY, WIPRO";
+                    tickerHelp.classList.remove('hidden');
+                    yearsGroup.classList.add('hidden');
+                } else {
+                    tickerLabel.textContent = "Company Ticker";
+                    tickerInput.placeholder = "e.g. RELIANCE";
+                    tickerHelp.classList.add('hidden');
+                    yearsGroup.classList.remove('hidden');
+                }
+            });
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Reset UI
+            statusMessage.classList.add('hidden');
+            statusMessage.className = 'status-message hidden';
+            downloadArea.classList.add('hidden');
+
+            // Loading State
+            generateBtn.disabled = true;
+            btnText.classList.add('hidden');
+            btnIcon.classList.add('hidden');
+            spinner.classList.remove('hidden');
+
+            const mode = currentModeInput.value;
+            let url = '/generate';
+            let body = {};
+
+            if (mode === 'extract') {
+                url = '/generate';
+                body = {
+                    ticker: tickerInput.value,
+                    years: document.getElementById('years').value
+                };
+            } else {
+                url = '/compare';
+                body = {
+                    tickers: tickerInput.value
+                };
+            }
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (response.ok) {
+                    // It's a file blob
+                    const blob = await response.blob();
+
+                    // Get filename from Content-Disposition header if possible, or fallback
+                    let filename = 'Financial_Model.xlsx';
+                    const disposition = response.headers.get('Content-Disposition');
+                    if (disposition && disposition.indexOf('attachment') !== -1) {
+                        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                        const matches = filenameRegex.exec(disposition);
+                        if (matches != null && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    const downloadUrl = window.URL.createObjectURL(blob);
+
+                    downloadArea.classList.remove('hidden');
+                    downloadLink.href = downloadUrl;
+                    downloadLink.download = filename;
+
+                    statusMessage.textContent = `Successfully generated file.`;
+                    statusMessage.className = 'status-message success';
+                    statusMessage.classList.remove('hidden');
+                } else {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+            } catch (error) {
+                statusMessage.textContent = error.message;
+                statusMessage.className = 'status-message error';
+                statusMessage.classList.remove('hidden');
+            } finally {
+                // Reset Loading State
+                generateBtn.disabled = false;
+                btnText.classList.remove('hidden');
+                btnIcon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        });
+
+        // Particles.js Config
+        particlesJS("particles-js", {
+            "particles": {
+                "number": {
+                    "value": 80,
+                    "density": {
+                        "enable": true,
+                        "value_area": 800
+                    }
+                },
+                "color": {
+                    "value": "#ffffff"
+                },
+                "shape": {
+                    "type": "circle",
+                    "stroke": {
+                        "width": 0,
+                        "color": "#000000"
+                    },
+                    "polygon": {
+                        "nb_sides": 5
+                    }
+                },
+                "opacity": {
+                    "value": 0.2,
+                    "random": false,
+                    "anim": {
+                        "enable": false,
+                        "speed": 1,
+                        "opacity_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "size": {
+                    "value": 3,
+                    "random": true,
+                    "anim": {
+                        "enable": false,
+                        "speed": 40,
+                        "size_min": 0.1,
+                        "sync": false
+                    }
+                },
+                "line_linked": {
+                    "enable": true,
+                    "distance": 150,
+                    "color": "#ffffff",
+                    "opacity": 0.1,
+                    "width": 1
+                },
+                "move": {
+                    "enable": true,
+                    "speed": 2,
+                    "direction": "none",
+                    "random": false,
+                    "straight": false,
+                    "out_mode": "out",
+                    "bounce": false,
+                    "attract": {
+                        "enable": false,
+                        "rotateX": 600,
+                        "rotateY": 1200
+                    }
+                }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": {
+                        "enable": true,
+                        "mode": "grab"
+                    },
+                    "onclick": {
+                        "enable": true,
+                        "mode": "push"
+                    },
+                    "resize": true
+                },
+                "modes": {
+                    "grab": {
+                        "distance": 140,
+                        "line_linked": {
+                            "opacity": 0.5
+                        }
+                    },
+                    "bubble": {
+                        "distance": 400,
+                        "size": 40,
+                        "duration": 2,
+                        "opacity": 8,
+                        "speed": 3
+                    },
+                    "repulse": {
+                        "distance": 200,
+                        "duration": 0.4
+                    },
+                    "push": {
+                        "particles_nb": 4
+                    },
+                    "remove": {
+                        "particles_nb": 2
+                    }
+                }
+            },
+            "retina_detect": true
+        });
+    </script>
+</body>
+
+</html>
