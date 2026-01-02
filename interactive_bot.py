@@ -7,7 +7,7 @@ def main():
     while True:
         print("\n--- Financial Data Bot ---")
         print("1. Data Extraction")
-        print("2. Compare 3 companies 3 years data")
+        print("2. Compare up to 5 companies 3 years data")
         print("3. Exit")
         
         choice = input("Select an option (1/2/3): ").strip()
@@ -38,7 +38,7 @@ def main():
                 print(f"An error occurred: {e}")
                 
         elif choice == '2':
-            tickers_input = input("Give 3 tickers of the companies separated by comma: ").strip()
+            tickers_input = input("Give up to 5 tickers of the companies separated by comma: ").strip()
             if not tickers_input:
                 print("No tickers provided.")
                 continue
@@ -47,9 +47,9 @@ def main():
             tickers = [t.strip().upper() for t in tickers_input.split(',')]
             tickers = [t for t in tickers if t] # remove empty strings
             
-            if len(tickers) > 3:
-                print("More than 3 tickers provided. Taking the first 3.")
-                tickers = tickers[:3]
+            if len(tickers) > 5:
+                print("More than 5 tickers provided. Taking the first 5.")
+                tickers = tickers[:5]
             elif len(tickers) < 1:
                 print("Please provide at least one ticker.")
                 continue

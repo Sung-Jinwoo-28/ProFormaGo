@@ -41,8 +41,8 @@ def get_company_data(ticker, years=5):
         return None
 
 def create_comparison_sheet(companies, in_memory=False):
-    if len(companies) > 3:
-        print("Error: Maximum 3 companies allowed.")
+    if len(companies) > 5:
+        print("Error: Maximum 5 companies allowed.")
         return None
 
     wb = Workbook()
@@ -57,7 +57,7 @@ def create_comparison_sheet(companies, in_memory=False):
     font_bold = Font(bold=True)
     
     # Company Headers
-    header_colors = ["00B0F0", "7030A0", "FF0000"] # Blue, Purple, Red
+    header_colors = ["00B0F0", "7030A0", "FF0000", "00B050", "ED7D31"] # Blue, Purple, Red, Green, Orange
     font_white_bold = Font(color="FFFFFF", bold=True)
     
     align_center = Alignment(horizontal='center', vertical='center')
@@ -233,12 +233,12 @@ def create_comparison_sheet(companies, in_memory=False):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python company_comparator.py TICKER1 [TICKER2] [TICKER3]")
+        print("Usage: python company_comparator.py TICKER1 [TICKER2] [TICKER3] [TICKER4] [TICKER5]")
         sys.exit(1)
         
     tickers = sys.argv[1:]
-    if len(tickers) > 3:
-        tickers = tickers[:3]
-        print("Truncating to first 3 tickers.")
+    if len(tickers) > 5:
+        tickers = tickers[:5]
+        print("Truncating to first 5 tickers.")
         
     create_comparison_sheet(tickers)

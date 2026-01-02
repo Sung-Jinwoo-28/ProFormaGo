@@ -66,8 +66,8 @@ def compare():
         if len(tickers) < 1:
              return jsonify({'error': 'At least one ticker is required'}), 400
         
-        if len(tickers) > 3:
-             return jsonify({'error': 'Maximum 3 tickers allowed'}), 400
+        if len(tickers) > 5:
+             return jsonify({'error': 'Maximum 5 tickers allowed'}), 400
 
         file_buffer = create_comparison_sheet(tickers, in_memory=True)
 
