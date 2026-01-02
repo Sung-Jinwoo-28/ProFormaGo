@@ -40,6 +40,101 @@ def get_company_data(ticker, years=5):
         print(f"Error extracting {ticker}: {e}")
         return None
 
+def add_growth_sheet(wb, all_data):
+    ws = wb.create_sheet("YoY Growth")
+    
+    # Styles
+    header_colors = ["00B0F0", "7030A0", "FF0000", "00B050", "ED7D31"]
+    style_metric_header = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
+    font_bold = Font(bold=True)
+    font_white_bold = Font(color="FFFFFF", bold=True)
+    align_center = Alignment(horizontal='center', vertical='center')
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # A1: Metric
+    c1 = ws.cell(row=1, column=1, value="Growth Metrics")
+    c1.fill = style_metric_header
+    c1.font = font_bold
+    c1.alignment = align_center
+    c1.border = thin_border
+
+    current_col = 2
+    growth_map = [] 
+
+    for i, (ticker, df) in enumerate(all_data):
+        all_cols = [c for c in df.columns if c != 'Metric' and c != 'TTM' and not str(c).startswith('Sep ')]
+        valid_cols = all_cols[-3:]
+        
+        start_col = current_col
+        end_col = current_col + len(valid_cols) - 1
+        
+        cell = ws.cell(row=1, column=start_col, value=ticker)
+        ws.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
+        
+        color = header_colors[i] if i < len(header_colors) else "808080"
+        fill = PatternFill(start_color=color, end_color=color, fill_type="solid")
+        
+        for c_idx in range(start_col, end_col + 1):
+             c = ws.cell(row=1, column=c_idx)
+             c.fill = fill
+             c.font = font_white_bold
+             c.alignment = align_center
+             c.border = thin_border
+             
+        for j, col_name in enumerate(valid_cols):
+            c = ws.cell(row=2, column=start_col + j, value=col_name)
+            c.font = font_bold
+            c.alignment = align_center
+            c.border = thin_border
+            
+        growth_map.append({'df': df, 'all_cols': all_cols, 'valid_cols': valid_cols, 'start_col': start_col})
+        current_col = end_col + 1
+    
+    metrics_to_calc = [('Sales', 'YoY Revenue Growth'), ('Net Profit', 'YoY Profit Growth')]
+    
+    row_idx = 3
+    for source_metric, display_name in metrics_to_calc:
+        c = ws.cell(row=row_idx, column=1, value=display_name)
+        c.font = font_bold
+        c.border = thin_border
+        
+        for item in growth_map:
+            df, all_cols, valid_cols, start_col = item['df'], item['all_cols'], item['valid_cols'], item['start_col']
+            
+            match = df[df['Metric'].astype(str).str.startswith(source_metric)]
+            if match.empty:
+                 match = df[df['Metric'].astype(str).apply(lambda x: x.replace('+', '').strip()) == source_metric]
+            
+            if not match.empty:
+                vals = match.iloc[0]
+                for k, year in enumerate(valid_cols):
+                    cell = ws.cell(row=row_idx, column=start_col + k)
+                    cell.border = thin_border
+                    try:
+                        curr_idx = all_cols.index(year)
+                        if curr_idx > 0:
+                            prev_year = all_cols[curr_idx - 1]
+                            v1 = vals.get(year)
+                            v2 = vals.get(prev_year)
+                            if pd.notna(v1) and pd.notna(v2) and v2 != 0:
+                                val = (float(v1) - float(v2)) / abs(float(v2))
+                                cell.value = val
+                                cell.number_format = '0.00%'
+                            else:
+                                cell.value = "-"
+                                cell.alignment = align_center
+                        else:
+                            cell.value = "-"
+                            cell.alignment = align_center
+                    except (ValueError, IndexError):
+                         pass
+        row_idx += 1
+
+    ws.column_dimensions['A'].width = 30
+    for col in range(2, current_col):
+        col_letter = ws.cell(row=2, column=col).column_letter
+        ws.column_dimensions[col_letter].width = 15
+
 def create_comparison_sheet(companies, in_memory=False):
     if len(companies) > 5:
         print("Error: Maximum 5 companies allowed.")
@@ -210,6 +305,9 @@ def create_comparison_sheet(companies, in_memory=False):
     for col in range(2, current_col):
         col_letter = ws.cell(row=2, column=col).column_letter
         ws.column_dimensions[col_letter].width = 15
+    
+    # --- Add Growth Sheet ---
+    add_growth_sheet(wb, all_data)
 
     # Create filename with company names
     companies_str = "_".join(companies)
