@@ -182,7 +182,7 @@ def create_comparison_sheet(companies, in_memory=False):
     # Defined lists based on standard Screener format
     categories = {
         'Profit & Loss': [
-            'Sales', 'Expenses', 'Operating Profit', 'OPM %', 'Other Income', 
+            'Sales', 'Revenue', 'Expenses', 'Operating Profit', 'Financing Profit', 'OPM %', 'Financing Margin %', 'Other Income', 
             'Interest', 'Depreciation', 'Profit before tax', 'Tax %', 'Net Profit', 
             'EPS in Rs', 'Dividend Payout %'
         ],

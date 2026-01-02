@@ -300,8 +300,15 @@ class ScreenerExtractor:
 
         # Extract inputs & Extend BS items
         sales = get_series(pnl, 'Sales')
+        if sales is None:
+             sales = get_series(pnl, 'Revenue')
+
         net_profit = get_series(pnl, 'Net Profit')
+        
         op_profit = get_series(pnl, 'Operating Profit')
+        if op_profit is None:
+             op_profit = get_series(pnl, 'Financing Profit')
+
         interest = get_series(pnl, 'Interest') # New
         eps = get_series(pnl, 'EPS')
         
